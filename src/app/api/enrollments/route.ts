@@ -1,5 +1,5 @@
 import { checkToken } from "@lib/checkToken";
-import { Database, Payload } from "@lib/types";
+import {  Payload } from "@lib/types";
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@lib/getPrisma";
 
@@ -82,6 +82,41 @@ export const POST = async (request: NextRequest) => {
 
   // Coding in lecture
 
+
+  const prisma = getPrisma();
+  const courses = await prisma.course.findUnique({
+    where: { courseNo: courseNo }
+  });
+
+  if(!courses){
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Course number does not exist",
+      },
+      { status: 400 }
+    );
+  }
+  const enrollments = await prisma.enrollment.findUnique({
+    where:{courseNo_studentId:{courseNo:courseNo, studentId:studentId}}
+  });
+  if(enrollments){
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "You already registered this course",
+      },
+      { status: 400 }
+    );
+  }
+  await prisma.enrollment.create({
+    data: {
+      courseNo: courseNo,
+      studentId: studentId
+    }
+  })
+
+
   return NextResponse.json({
     ok: true,
     message: "You has enrolled a course successfully",
@@ -128,6 +163,12 @@ export const DELETE = async (request: NextRequest) => {
   const prisma = getPrisma();
   // Perform data delete
 
+
+  await prisma.enrollment.delete({
+    where:{courseNo_studentId:{courseNo:courseNo, studentId:studentId}}
+  }
+  )
+  
   return NextResponse.json({
     ok: true,
     message: "You has dropped from this course. See you next semester.",
